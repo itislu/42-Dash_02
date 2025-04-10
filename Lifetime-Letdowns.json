@@ -1,0 +1,17 @@
+{
+	"compilation": "OK",
+	"scores": [
+		{
+			"maps": [
+				"dashes/beacon/maps/openleague/level_0_0.txt",
+				"dashes/beacon/maps/openleague/level_0_1.txt",
+				"dashes/beacon/maps/openleague/level_0_2.txt",
+				"dashes/beacon/maps/openleague/level_0_3.txt"
+			],
+			"beacons": "4",
+			"score": 21,
+			"status": "OK",
+			"output": "2314|6,6"
+		}
+	]
+}
