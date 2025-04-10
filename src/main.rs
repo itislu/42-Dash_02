@@ -117,9 +117,18 @@ impl Map {
 
         for row in min_row..=max_row {
             for col in min_col..=max_col {
-                self.grid[row][col].covered = true;
+                if self.grid[row][col].field_type == MapFieldType::Node {
+                    self.grid[row][col].covered = true;
+                }
             }
         }
+    }
+}
+
+fn effective_radius(map: &Map, pos: &Position, beacon: usize) -> usize {
+    match map.grid[pos.row][pos.col].field_type {
+        MapFieldType::Space(value) => value + beacon,
+        _ => panic!("Effective radius called on Node"),
     }
 }
 
@@ -136,7 +145,8 @@ fn try_map(map: &mut Map, beacons: &[usize]) -> Vec<Position> {
                     continue;
                 }
 
-                let value = map.uncovered_nodes(Position { row, col }, *beacon);
+                let radius = effective_radius(map, &Position { row, col }, *beacon);
+                let value = map.uncovered_nodes(Position { row, col }, radius);
                 if max.is_empty() || max[0].0 == value {
                     max.push((value, Position { row, col }));
                 } else if value > max[0].0 {
@@ -147,7 +157,8 @@ fn try_map(map: &mut Map, beacons: &[usize]) -> Vec<Position> {
         }
 
         // Check the other results too
-        map.put_beacon(&max[0].1, *beacon);
+        let radius = effective_radius(map, &max[0].1, *beacon);
+        map.put_beacon(&max[0].1, radius);
         positions.push(max[0].1);
     }
 
@@ -169,8 +180,9 @@ fn main() {
         })
         .collect();
 
-    try_map(&mut maps[0].clone(), &beacons);
+    let positions = try_map(&mut maps[0].clone(), &beacons);
 
-    println!("{:?}", beacons);
-    println!("{:?}", maps);
+    // println!("{:?}", beacons);
+    // println!("{:?}", maps);
+    println!("{:?}", positions);
 }
