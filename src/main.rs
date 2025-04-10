@@ -274,25 +274,52 @@ fn try_map(map: &mut Map, beacons: &[usize]) -> Vec<Position> {
             let mut prev_value = None;
             let mut prev_radius = None;
 
-            for col in 0..map.width {
-                if map.grid[row][col].field_type == MapFieldType::Node || map.grid[row][col].covered
-                {
-                    continue;
-                }
+            if row % 2 == 0 {
+                for col in 0..map.width {
+                    if map.grid[row][col].field_type == MapFieldType::Node
+                        || map.grid[row][col].covered
+                    {
+                        continue;
+                    }
 
-                let pos = Position { row, col };
-                let radius = effective_radius(map, &pos, *beacon);
-                let value = map.uncovered_nodes(&pos, radius, prev_pos, prev_value, prev_radius);
-                if max.is_empty() || max[0].0 == value {
-                    max.push((value, pos.clone()));
-                } else if value > max[0].0 {
-                    max.clear();
-                    max.push((value, pos.clone()));
-                }
+                    let pos = Position { row, col };
+                    let radius = effective_radius(map, &pos, *beacon);
+                    let value =
+                        map.uncovered_nodes(&pos, radius, prev_pos, prev_value, prev_radius);
+                    if max.is_empty() || max[0].0 == value {
+                        max.push((value, pos.clone()));
+                    } else if value > max[0].0 {
+                        max.clear();
+                        max.push((value, pos.clone()));
+                    }
 
-                prev_pos = Some(pos);
-                prev_value = Some(value);
-                prev_radius = Some(radius);
+                    prev_pos = Some(pos);
+                    prev_value = Some(value);
+                    prev_radius = Some(radius);
+                }
+            } else {
+                for col in (0..map.width).rev() {
+                    if map.grid[row][col].field_type == MapFieldType::Node
+                        || map.grid[row][col].covered
+                    {
+                        continue;
+                    }
+
+                    let pos = Position { row, col };
+                    let radius = effective_radius(map, &pos, *beacon);
+                    let value =
+                        map.uncovered_nodes(&pos, radius, prev_pos, prev_value, prev_radius);
+                    if max.is_empty() || max[0].0 == value {
+                        max.push((value, pos.clone()));
+                    } else if value > max[0].0 {
+                        max.clear();
+                        max.push((value, pos.clone()));
+                    }
+
+                    prev_pos = Some(pos);
+                    prev_value = Some(value);
+                    prev_radius = Some(radius);
+                }
             }
         }
 
