@@ -26,6 +26,12 @@ struct Position {
     col: usize,
 }
 
+impl std::fmt::Display for Position {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{},{}", self.row, self.col)
+    }
+}
+
 fn parse_map(input: &str, id: usize) -> Map {
     let grid: Vec<_> = input
         .lines()
@@ -165,6 +171,15 @@ fn try_map(map: &mut Map, beacons: &[usize]) -> Vec<Position> {
     positions
 }
 
+fn print_result(map: &Map, positions: &[Position]) {
+    let mut result = String::new();
+    for position in positions {
+        result += &format!("{}|", position);
+    }
+    result.pop();
+    println!("{}|{}", map.id, result);
+}
+
 fn main() {
     let args: Vec<_> = env::args().collect();
 
@@ -184,5 +199,5 @@ fn main() {
 
     // println!("{:?}", beacons);
     // println!("{:?}", maps);
-    println!("{:?}", positions);
+    print_result(&maps[0], &positions);
 }
