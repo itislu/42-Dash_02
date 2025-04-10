@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 
 [profile.dev]
-opt-level = 2              # O2 optimization
-debug = false              # No debug symbols
-debug-assertions = false   # Removes debug_assert! and related
-overflow-checks = false    # Allows wrapping/overflow without panic
+# opt-level = 2 # O2 optimization
+# debug = false # No debug symbols
+# debug-assertions = false   # Removes debug_assert! and related
+# overflow-checks = false # Allows wrapping/overflow without panic
