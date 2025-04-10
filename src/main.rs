@@ -180,6 +180,55 @@ fn print_result(map: &Map, positions: &[Position]) {
     println!("{}|{}", map.id, result);
 }
 
+fn merge_maps(maps: &[Map], order: &[usize]) -> Map {
+    let id = order
+        .iter()
+        .rev()
+        .enumerate()
+        .map(|(id, value)| (value + 1) * 10_usize.pow(id as u32))
+        .sum();
+    println!("{}", id);
+
+    let mut grid = Vec::new();
+
+    for row in 0..maps[order[0]].height {
+        let mut line = Vec::new();
+
+        for col in 0..maps[order[0]].width {
+            line.push(maps[order[0]].grid[row][col].clone());
+        }
+
+        for col in 0..maps[order[1]].width {
+            line.push(maps[order[1]].grid[row][col].clone());
+        }
+
+        grid.push(line);
+    }
+
+    for row in 0..maps[2].height {
+        let mut line = Vec::new();
+
+        for col in 0..maps[order[2]].width {
+            line.push(maps[order[0]].grid[row][col].clone());
+        }
+
+        for col in 0..maps[order[3]].width {
+            line.push(maps[order[1]].grid[row][col].clone());
+        }
+
+        grid.push(line);
+    }
+
+    let (height, width) = (grid.len(), grid[0].len());
+
+    Map {
+        id,
+        grid,
+        height,
+        width,
+    }
+}
+
 fn main() {
     let args: Vec<_> = env::args().collect();
 
@@ -195,7 +244,9 @@ fn main() {
         })
         .collect();
 
-    let positions = try_map(&mut maps[0].clone(), &beacons);
+    let mut merged = merge_maps(&maps, &[1, 2, 0, 3]);
+
+    let positions = try_map(&mut merged, &beacons);
 
     // println!("{:?}", beacons);
     // println!("{:?}", maps);
