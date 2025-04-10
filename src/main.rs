@@ -248,7 +248,5 @@ fn main() {
 
     let positions = try_map(&mut merged, &beacons);
 
-    // println!("{:?}", beacons);
-    // println!("{:?}", maps);
-    print_result(&maps[0], &positions);
+    print_result(&merged, &positions);
 }
