@@ -138,8 +138,9 @@ fn effective_radius(map: &Map, pos: &Position, beacon: usize) -> usize {
     }
 }
 
-fn try_map(map: &mut Map, beacons: &[usize]) -> Vec<Position> {
+fn try_map(map: &mut Map, beacons: &[usize]) -> (usize, Vec<Position>) {
     let mut positions = Vec::new();
+    let mut total = 0;
 
     for beacon in beacons {
         let mut max: Vec<(usize, Position)> = Vec::new();
@@ -165,10 +166,12 @@ fn try_map(map: &mut Map, beacons: &[usize]) -> Vec<Position> {
         // Check the other results too
         let radius = effective_radius(map, &max[0].1, *beacon);
         map.put_beacon(&max[0].1, radius);
+        map.grid[max[0].1.row][max[0].1.col].covered = true;
+        total += max[0].0;
         positions.push(max[0].1);
     }
 
-    positions
+    (total, positions)
 }
 
 fn print_result(map: &Map, positions: &[Position]) {
@@ -187,7 +190,6 @@ fn merge_maps(maps: &[Map], order: &[usize]) -> Map {
         .enumerate()
         .map(|(id, value)| (value + 1) * 10_usize.pow(id as u32))
         .sum();
-    println!("{}", id);
 
     let mut grid = Vec::new();
 
@@ -229,6 +231,37 @@ fn merge_maps(maps: &[Map], order: &[usize]) -> Map {
     }
 }
 
+fn print_random_bs(map: &mut Map, beacons: &[usize]) {
+    let mut positions = Vec::new();
+    let mut remaining = beacons.len();
+
+    for beacon in beacons {
+        for row in 0..map.height {
+            let mut breaking = false;
+            for col in 0..map.width {
+                if map.grid[row][col].field_type == MapFieldType::Node || map.grid[row][col].covered
+                {
+                    continue;
+                }
+
+                let radius = effective_radius(map, &Position { row, col }, *beacon);
+                map.put_beacon(&Position { row, col }, radius);
+                positions.push(Position { row, col });
+                remaining -= 1;
+                breaking = true;
+                map.grid[row][col].covered = true;
+
+                break;
+            }
+            if breaking {
+                break;
+            }
+        }
+    }
+
+    print_result(map, &positions);
+}
+
 fn main() {
     let args: Vec<_> = env::args().collect();
 
@@ -244,9 +277,43 @@ fn main() {
         })
         .collect();
 
-    let mut merged = merge_maps(&maps, &[1, 2, 0, 3]);
+    let possibilities = [
+        [0, 1, 2, 3],
+        [0, 1, 3, 2],
+        [0, 2, 1, 3],
+        [0, 2, 3, 1],
+        [0, 3, 1, 2],
+        [0, 3, 2, 1],
+        [1, 0, 2, 3],
+        [1, 0, 3, 2],
+        [1, 2, 0, 3],
+        [1, 2, 3, 0],
+        [1, 3, 0, 2],
+        [1, 3, 2, 0],
+        [2, 0, 1, 3],
+        [2, 0, 3, 1],
+        [2, 1, 0, 3],
+        [2, 1, 3, 0],
+        [2, 3, 0, 1],
+        [2, 3, 1, 0],
+        [3, 0, 1, 2],
+        [3, 0, 2, 1],
+        [3, 1, 0, 2],
+        [3, 1, 2, 0],
+        [3, 2, 0, 1],
+        [3, 2, 1, 0],
+    ];
 
-    let positions = try_map(&mut merged, &beacons);
+    let mut merged = merge_maps(&maps, &possibilities[0]);
+    print_random_bs(&mut merged, &beacons);
 
-    print_result(&merged, &positions);
+    let mut max = 0;
+    for possibility in possibilities {
+        let mut merged = merge_maps(&maps, &possibility);
+        let (total, positions) = try_map(&mut merged, &beacons);
+        if total > max {
+            print_result(&merged, &positions);
+            max = total;
+        }
+    }
 }
