@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, env, fs::read_to_string};
+use std::{env, fs::read_to_string};
 
 #[derive(Debug, PartialEq, Clone)]
 enum MapFieldType {
@@ -67,9 +67,9 @@ impl Map {
         pos: &Position,
         radius: usize,
         prev_pos: Option<Position>,
-        prev_value: Option<usize>,
+        prev_value: Option<isize>,
         prev_radius: Option<usize>,
-    ) -> usize {
+    ) -> isize {
         let min_col = if radius > pos.col {
             0
         } else {
@@ -91,119 +91,168 @@ impl Map {
             pos.row + radius
         };
 
-        let mut total = 0;
+        let mut total: isize = 0;
 
         if let (Some(prev_pos), Some(prev_value), Some(prev_radius)) =
             (prev_pos, prev_value, prev_radius)
         {
             total = prev_value;
-            let col_diff = prev_pos.col as isize - pos.col as isize;
-            let row_diff = prev_pos.row as isize - pos.row as isize;
-            let radius_diff = prev_radius as isize - radius as isize;
+            let prev_min_col = if prev_radius > prev_pos.col {
+                0
+            } else {
+                prev_pos.col - prev_radius
+            };
+            let prev_min_row = if prev_radius > prev_pos.row {
+                0
+            } else {
+                prev_pos.row - prev_radius
+            };
+            let prev_max_col = if prev_pos.col + prev_radius >= self.width {
+                self.width - 1
+            } else {
+                prev_pos.col + prev_radius
+            };
+            let prev_max_row = if prev_pos.row + prev_radius >= self.height {
+                self.height - 1
+            } else {
+                prev_pos.row + prev_radius
+            };
 
-            match radius.cmp(&prev_radius) {
-                Ordering::Equal => {
-                    if col_diff != 0 {
-                        for row in min_row..=max_row {
-                            if let Some(field) = self.get_by_offset(pos, 0, col_diff) {
-                                if field.field_type == MapFieldType::Node && !field.covered {
-                                    total -= 1;
-                                }
-                            }
-
-                            if let Some(field) = self.get_by_offset(pos, 0, -col_diff) {
-                                if field.field_type == MapFieldType::Node && !field.covered {
-                                    total += 1;
-                                }
-                            }
+            // Go right - left side
+            if min_col > prev_min_col {
+                for row in min_row..=max_row {
+                    for col in prev_min_col..min_col {
+                        let field = &self.grid[row][col];
+                        if field.field_type == MapFieldType::Node && !field.covered {
+                            total -= 1;
                         }
-                    } else if row_diff != 0 {
-                        for col in min_col..=max_col {
-                            if let Some(field) = self.get_by_offset(pos, row_diff, 0) {
-                                if field.field_type == MapFieldType::Node && !field.covered {
-                                    total -= 1;
-                                }
-                            }
+                    }
+                }
+            }
+            // Go left - left side
+            else if min_col < prev_min_col {
+                for row in min_row..=max_row {
+                    for col in min_col..prev_min_col {
+                        let field = &self.grid[row][col];
+                        if field.field_type == MapFieldType::Node && !field.covered {
+                            total += 1;
+                        }
+                    }
+                }
+            }
+            // Go right - right side
+            if max_col > prev_max_col {
+                for row in min_row..=max_row {
+                    for col in prev_max_col + 1..=max_col {
+                        let field = &self.grid[row][col];
+                        if field.field_type == MapFieldType::Node && !field.covered {
+                            total += 1;
+                        }
+                    }
+                }
+            }
+            // Go left - right side
+            else if max_col < prev_max_col {
+                for row in min_row..=max_row {
+                    for col in max_col + 1..=prev_max_col {
+                        let field = &self.grid[row][col];
+                        if field.field_type == MapFieldType::Node && !field.covered {
+                            total -= 1;
+                        }
+                    }
+                }
+            }
+            // Go down - top side
+            if min_row > prev_min_row {
+                for col in min_col..=max_col {
+                    for row in prev_min_row..min_row {
+                        let field = &self.grid[row][col];
+                        if field.field_type == MapFieldType::Node && !field.covered {
+                            total -= 1;
+                        }
+                    }
+                }
+            }
+            // Go up - top side
+            else if min_row < prev_min_row {
+                for col in min_col..=max_col {
+                    for row in min_row..prev_min_row {
+                        let field = &self.grid[row][col];
+                        if field.field_type == MapFieldType::Node && !field.covered {
+                            total += 1;
+                        }
+                    }
+                }
+            }
+            // Go down - bottom side
+            if max_row > prev_max_row {
+                for col in min_col..=max_col {
+                    for row in prev_max_row + 1..=max_row {
+                        let field = &self.grid[row][col];
+                        if field.field_type == MapFieldType::Node && !field.covered {
+                            total += 1;
+                        }
+                    }
+                }
+            }
+            // Go up - bottom side
+            else if max_row < prev_max_row {
+                for col in min_col..=max_col {
+                    for row in max_row + 1..=prev_max_row {
+                        let field = &self.grid[row][col];
+                        if field.field_type == MapFieldType::Node && !field.covered {
+                            total -= 1;
+                        }
+                    }
+                }
+            }
 
-                            if let Some(field) = self.get_by_offset(pos, -row_diff, 0) {
-                                if field.field_type == MapFieldType::Node && !field.covered {
-                                    total += 1;
-                                }
+            // Corners
+            if radius != prev_radius {
+                // Left side decrease
+                if min_col > prev_min_col {
+                    for row in (prev_min_row..min_row).chain(max_row + 1..=prev_max_row) {
+                        for col in prev_min_col..min_col {
+                            let field = &self.grid[row][col];
+                            if field.field_type == MapFieldType::Node && !field.covered {
+                                total -= 1;
                             }
                         }
                     }
                 }
-                Ordering::Less => {
-                    for row in (min_row as isize + radius_diff)..=(max_row as isize - radius_diff) {
-                        if row < 0 || row as usize >= self.height {
-                            continue;
-                        }
-
-                        for col in 0..radius_diff.abs() - col_diff {
-                            // for col in (min_col - 1 + radius_diff)..=(min_col - 1) {
-                            if let Some(field) = self.get_by_offset(
-                                &Position {
-                                    row: row as usize,
-                                    col: min_col,
-                                },
-                                0,
-                                -col + col_diff,
-                            ) {
-                                if field.field_type == MapFieldType::Node && !field.covered {
-                                    total -= 1;
-                                }
-                            }
-                        }
-
-                        for col in 0..radius_diff.abs() + col_diff {
-                            if let Some(field) = self.get_by_offset(
-                                &Position {
-                                    row: row as usize,
-                                    col: max_col,
-                                },
-                                0,
-                                col - col_diff,
-                            ) {
-                                if field.field_type == MapFieldType::Node && !field.covered {
-                                    total += 1;
-                                }
-                            }
-                        }
-                    }
-                    for col in min_col..=max_col {
-                        for row in 0..radius_diff.abs() - row_diff {
-                            // for col in (min_col - 1 + radius_diff)..=(min_col - 1) {
-                            if let Some(field) = self.get_by_offset(
-                                &Position {
-                                    row: min_row,
-                                    col: col as usize,
-                                },
-                                -row + row_diff,
-                                0,
-                            ) {
-                                if field.field_type == MapFieldType::Node && !field.covered {
-                                    total -= 1;
-                                }
-                            }
-                        }
-
-                        for row in 0..radius_diff.abs() + row_diff {
-                            if let Some(field) = self.get_by_offset(
-                                &Position {
-                                    row: max_row,
-                                    col: col as usize,
-                                },
-                                row - row_diff,
-                                0,
-                            ) {
-                                if field.field_type == MapFieldType::Node && !field.covered {
-                                    total += 1;
-                                }
+                // Left side increase
+                else if min_col < prev_min_col {
+                    for row in (min_row..prev_min_row).chain(prev_max_row + 1..=max_row) {
+                        for col in min_col..prev_min_col {
+                            let field = &self.grid[row][col];
+                            if field.field_type == MapFieldType::Node && !field.covered {
+                                total += 1;
                             }
                         }
                     }
                 }
-                _ => {}
+                // Right side increase
+                if max_col > prev_max_col {
+                    for row in (min_row..prev_min_row).chain(prev_max_row + 1..=max_row) {
+                        for col in prev_max_col + 1..=max_col {
+                            let field = &self.grid[row][col];
+                            if field.field_type == MapFieldType::Node && !field.covered {
+                                total += 1;
+                            }
+                        }
+                    }
+                }
+                // Right side decrease
+                else if max_col < prev_max_col {
+                    for row in (prev_min_row..min_row).chain(max_row + 1..=prev_max_row) {
+                        for col in max_col + 1..=prev_max_col {
+                            let field = &self.grid[row][col];
+                            if field.field_type == MapFieldType::Node && !field.covered {
+                                total -= 1;
+                            }
+                        }
+                    }
+                }
             }
 
             return total;
@@ -220,27 +269,6 @@ impl Map {
         }
 
         total
-    }
-
-    fn get_by_offset(&self, pos: &Position, row_diff: isize, col_diff: isize) -> Option<&MapField> {
-        if (row_diff < 0 && -row_diff as usize > pos.row)
-            || (col_diff < 0 && -col_diff as usize > pos.col)
-        {
-            return None;
-        }
-
-        if (row_diff > 0 && row_diff as usize + pos.row >= self.height)
-            || (col_diff > 0 && col_diff as usize + pos.col >= self.width)
-        {
-            return None;
-        }
-
-        let (row, col) = (
-            (pos.row as isize + row_diff) as usize,
-            (pos.col as isize + col_diff) as usize,
-        );
-
-        Some(&self.grid[row][col])
     }
 
     fn put_beacon(&mut self, pos: &Position, radius: usize) {
@@ -286,7 +314,7 @@ fn try_map(map: &mut Map, beacons: &[usize]) -> Vec<Position> {
     let mut positions = Vec::new();
 
     for beacon in beacons {
-        let mut max: Vec<(usize, Position)> = Vec::new();
+        let mut max: Vec<(isize, Position)> = Vec::new();
         // Maybe don't start at the border
         for row in 0..map.height {
             let mut prev_pos = None;
