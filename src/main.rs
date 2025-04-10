@@ -268,14 +268,19 @@ fn try_map(map: &mut Map, beacons: &[usize]) -> Vec<Position> {
 
     for beacon in beacons {
         let mut max: Vec<(isize, Position)> = Vec::new();
-        // Maybe don't start at the border
-        for row in 0..map.height {
+        let start = if *beacon < map.height && *beacon < map.width {
+            *beacon
+        } else {
+            0
+        };
+
+        for row in start..map.height - start {
             let mut prev_pos = None;
             let mut prev_value = None;
             let mut prev_radius = None;
 
             if row % 2 == 0 {
-                for col in 0..map.width {
+                for col in start..map.width - start {
                     if map.grid[row][col].field_type == MapFieldType::Node
                         || map.grid[row][col].covered
                     {
@@ -298,7 +303,7 @@ fn try_map(map: &mut Map, beacons: &[usize]) -> Vec<Position> {
                     prev_radius = Some(radius);
                 }
             } else {
-                for col in (0..map.width).rev() {
+                for col in (start..map.width - start).rev() {
                     if map.grid[row][col].field_type == MapFieldType::Node
                         || map.grid[row][col].covered
                     {
