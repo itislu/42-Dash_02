@@ -162,7 +162,8 @@ impl Map {
                     }
                 }
             }
-            // Go down - top side
+
+            // Top side decrease
             if min_row > prev_min_row {
                 for col in min_col..=max_col {
                     for row in prev_min_row..min_row {
@@ -173,9 +174,9 @@ impl Map {
                     }
                 }
             }
-            // Go up - top side
+            // Top side increase
             else if min_row < prev_min_row {
-                for col in min_col..=max_col {
+                for col in prev_min_col..=prev_max_col {
                     for row in min_row..prev_min_row {
                         let field = &self.grid[row][col];
                         if field.field_type == MapFieldType::Node && !field.covered {
@@ -184,9 +185,9 @@ impl Map {
                     }
                 }
             }
-            // Go down - bottom side
+            // Bottom side increase
             if max_row > prev_max_row {
-                for col in min_col..=max_col {
+                for col in prev_min_col..=prev_max_col {
                     for row in prev_max_row + 1..=max_row {
                         let field = &self.grid[row][col];
                         if field.field_type == MapFieldType::Node && !field.covered {
@@ -195,7 +196,7 @@ impl Map {
                     }
                 }
             }
-            // Go up - bottom side
+            // Bottom side decrease
             else if max_row < prev_max_row {
                 for col in min_col..=max_col {
                     for row in max_row + 1..=prev_max_row {
