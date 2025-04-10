@@ -263,7 +263,7 @@ fn effective_radius(map: &Map, pos: &Position, beacon: usize) -> usize {
     }
 }
 
-fn try_map(map: &mut Map, beacons: &[usize]) -> (usize, Vec<Position>) {
+fn try_map(map: &mut Map, beacons: &[usize]) -> (isize, Vec<Position>) {
     let mut positions = Vec::new();
     let mut total = 0;
 
