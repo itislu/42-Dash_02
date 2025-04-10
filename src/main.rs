@@ -118,9 +118,9 @@ impl Map {
                 prev_pos.row + prev_radius
             };
 
-            // Go right - left side
+            // Left side decrease incl. corner
             if min_col > prev_min_col {
-                for row in min_row..=max_row {
+                for row in prev_min_row..=prev_max_row {
                     for col in prev_min_col..min_col {
                         let field = &self.grid[row][col];
                         if field.field_type == MapFieldType::Node && !field.covered {
@@ -129,7 +129,7 @@ impl Map {
                     }
                 }
             }
-            // Go left - left side
+            // Left side increase incl. corner
             else if min_col < prev_min_col {
                 for row in min_row..=max_row {
                     for col in min_col..prev_min_col {
@@ -140,7 +140,7 @@ impl Map {
                     }
                 }
             }
-            // Go right - right side
+            // Right side increase incl. corner
             if max_col > prev_max_col {
                 for row in min_row..=max_row {
                     for col in prev_max_col + 1..=max_col {
@@ -151,9 +151,9 @@ impl Map {
                     }
                 }
             }
-            // Go left - right side
+            // Right side decrease incl. corner
             else if max_col < prev_max_col {
-                for row in min_row..=max_row {
+                for row in prev_min_row..=prev_max_row {
                     for col in max_col + 1..=prev_max_col {
                         let field = &self.grid[row][col];
                         if field.field_type == MapFieldType::Node && !field.covered {
@@ -202,54 +202,6 @@ impl Map {
                         let field = &self.grid[row][col];
                         if field.field_type == MapFieldType::Node && !field.covered {
                             total -= 1;
-                        }
-                    }
-                }
-            }
-
-            // Corners
-            if radius != prev_radius {
-                // Left side decrease
-                if min_col > prev_min_col {
-                    for row in (prev_min_row..min_row).chain(max_row + 1..=prev_max_row) {
-                        for col in prev_min_col..min_col {
-                            let field = &self.grid[row][col];
-                            if field.field_type == MapFieldType::Node && !field.covered {
-                                total -= 1;
-                            }
-                        }
-                    }
-                }
-                // Left side increase
-                else if min_col < prev_min_col {
-                    for row in (min_row..prev_min_row).chain(prev_max_row + 1..=max_row) {
-                        for col in min_col..prev_min_col {
-                            let field = &self.grid[row][col];
-                            if field.field_type == MapFieldType::Node && !field.covered {
-                                total += 1;
-                            }
-                        }
-                    }
-                }
-                // Right side increase
-                if max_col > prev_max_col {
-                    for row in (min_row..prev_min_row).chain(prev_max_row + 1..=max_row) {
-                        for col in prev_max_col + 1..=max_col {
-                            let field = &self.grid[row][col];
-                            if field.field_type == MapFieldType::Node && !field.covered {
-                                total += 1;
-                            }
-                        }
-                    }
-                }
-                // Right side decrease
-                else if max_col < prev_max_col {
-                    for row in (prev_min_row..min_row).chain(max_row + 1..=prev_max_row) {
-                        for col in max_col + 1..=prev_max_col {
-                            let field = &self.grid[row][col];
-                            if field.field_type == MapFieldType::Node && !field.covered {
-                                total -= 1;
-                            }
                         }
                     }
                 }
