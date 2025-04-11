@@ -280,6 +280,7 @@ fn try_map(map: &mut Map, beacons: &[usize]) -> (isize, Vec<Position>) {
             let mut prev_value = None;
             let mut prev_radius = None;
 
+            // Splitting the loop like this makes it 10% faster (somehow)
             if row % 2 == 0 {
                 for col in start..map.width - start {
                     if map.grid[row][col].field_type == MapFieldType::Node
