@@ -478,6 +478,7 @@ fn main() {
         let mut merged = merge_maps(&maps, &possibility);
         let (total, positions) = try_map(&mut merged, &beacons);
         if total > max {
+            eprintln!("covered nodes: {}", total);
             print_result(&merged, &positions);
             max = total;
         }
