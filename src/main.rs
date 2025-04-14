@@ -269,20 +269,15 @@ fn try_map(map: &mut Map, beacons: &[usize]) -> (isize, Vec<Position>) {
 
     for beacon in beacons {
         let mut max: Vec<(isize, Position)> = Vec::new();
-        let start = if *beacon < map.height && *beacon < map.width {
-            *beacon
-        } else {
-            0
-        };
-
-        for row in start..map.height - start {
+        // TODO Maybe don't start at the border
+        for row in 0..map.height {
             let mut prev_pos = None;
             let mut prev_value = None;
             let mut prev_radius = None;
 
             // Splitting the loop like this makes it 10% faster (somehow)
             if row % 2 == 0 {
-                for col in start..map.width - start {
+                for col in 0..map.width {
                     if map.grid[row][col].field_type == MapFieldType::Node
                         || map.grid[row][col].covered
                     {
@@ -305,7 +300,7 @@ fn try_map(map: &mut Map, beacons: &[usize]) -> (isize, Vec<Position>) {
                     prev_radius = Some(radius);
                 }
             } else {
-                for col in (start..map.width - start).rev() {
+                for col in (0..map.width).rev() {
                     if map.grid[row][col].field_type == MapFieldType::Node
                         || map.grid[row][col].covered
                     {
@@ -330,7 +325,7 @@ fn try_map(map: &mut Map, beacons: &[usize]) -> (isize, Vec<Position>) {
             }
         }
 
-        // Check the other results too
+        // TODO Check the other results too
         let radius = effective_radius(map, &max[0].1, *beacon);
         map.put_beacon(&max[0].1, radius);
         map.grid[max[0].1.row][max[0].1.col].covered = true;
