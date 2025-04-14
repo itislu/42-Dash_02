@@ -400,11 +400,9 @@ fn merge_maps(maps: &[Map], order: &[usize]) -> Map {
 
 fn print_random_bs(map: &mut Map, beacons: &[usize]) {
     let mut positions = Vec::new();
-    let mut remaining = beacons.len();
 
     for beacon in beacons {
-        for row in 0..map.height {
-            let mut breaking = false;
+        'mid: for row in 0..map.height {
             for col in 0..map.width {
                 if map.grid[row][col].field_type == MapFieldType::Node || map.grid[row][col].covered
                 {
@@ -414,14 +412,9 @@ fn print_random_bs(map: &mut Map, beacons: &[usize]) {
                 let radius = effective_radius(map, &Position { row, col }, *beacon);
                 map.put_beacon(&Position { row, col }, radius);
                 positions.push(Position { row, col });
-                remaining -= 1;
-                breaking = true;
                 map.grid[row][col].covered = true;
 
-                break;
-            }
-            if breaking {
-                break;
+                break 'mid;
             }
         }
     }
