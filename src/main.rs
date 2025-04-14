@@ -62,7 +62,14 @@ fn parse_map(input: &str, id: usize) -> Map {
 }
 
 impl Map {
-    fn uncovered_nodes(&self, pos: Position, radius: usize) -> usize {
+    fn uncovered_nodes(
+        &self,
+        pos: &Position,
+        radius: usize,
+        prev_pos: Option<Position>,
+        prev_value: Option<isize>,
+        prev_radius: Option<usize>,
+    ) -> isize {
         let min_col = if radius > pos.col {
             0
         } else {
@@ -84,7 +91,125 @@ impl Map {
             pos.row + radius
         };
 
-        let mut total = 0;
+        let mut total: isize = 0;
+
+        if let (Some(prev_pos), Some(prev_value), Some(prev_radius)) =
+            (prev_pos, prev_value, prev_radius)
+        {
+            total = prev_value;
+            let prev_min_col = if prev_radius > prev_pos.col {
+                0
+            } else {
+                prev_pos.col - prev_radius
+            };
+            let prev_min_row = if prev_radius > prev_pos.row {
+                0
+            } else {
+                prev_pos.row - prev_radius
+            };
+            let prev_max_col = if prev_pos.col + prev_radius >= self.width {
+                self.width - 1
+            } else {
+                prev_pos.col + prev_radius
+            };
+            let prev_max_row = if prev_pos.row + prev_radius >= self.height {
+                self.height - 1
+            } else {
+                prev_pos.row + prev_radius
+            };
+
+            // Left side decrease incl. corner
+            if min_col > prev_min_col {
+                for row in prev_min_row..=prev_max_row {
+                    for col in prev_min_col..min_col {
+                        let field = &self.grid[row][col];
+                        if field.field_type == MapFieldType::Node && !field.covered {
+                            total -= 1;
+                        }
+                    }
+                }
+            }
+            // Left side increase incl. corner
+            else if min_col < prev_min_col {
+                for row in min_row..=max_row {
+                    for col in min_col..prev_min_col {
+                        let field = &self.grid[row][col];
+                        if field.field_type == MapFieldType::Node && !field.covered {
+                            total += 1;
+                        }
+                    }
+                }
+            }
+            // Right side increase incl. corner
+            if max_col > prev_max_col {
+                for row in min_row..=max_row {
+                    for col in prev_max_col + 1..=max_col {
+                        let field = &self.grid[row][col];
+                        if field.field_type == MapFieldType::Node && !field.covered {
+                            total += 1;
+                        }
+                    }
+                }
+            }
+            // Right side decrease incl. corner
+            else if max_col < prev_max_col {
+                for row in prev_min_row..=prev_max_row {
+                    for col in max_col + 1..=prev_max_col {
+                        let field = &self.grid[row][col];
+                        if field.field_type == MapFieldType::Node && !field.covered {
+                            total -= 1;
+                        }
+                    }
+                }
+            }
+
+            // Top side decrease
+            if min_row > prev_min_row {
+                for col in min_col..=max_col {
+                    for row in prev_min_row..min_row {
+                        let field = &self.grid[row][col];
+                        if field.field_type == MapFieldType::Node && !field.covered {
+                            total -= 1;
+                        }
+                    }
+                }
+            }
+            // Top side increase
+            else if min_row < prev_min_row {
+                for col in prev_min_col..=prev_max_col {
+                    for row in min_row..prev_min_row {
+                        let field = &self.grid[row][col];
+                        if field.field_type == MapFieldType::Node && !field.covered {
+                            total += 1;
+                        }
+                    }
+                }
+            }
+            // Bottom side increase
+            if max_row > prev_max_row {
+                for col in prev_min_col..=prev_max_col {
+                    for row in prev_max_row + 1..=max_row {
+                        let field = &self.grid[row][col];
+                        if field.field_type == MapFieldType::Node && !field.covered {
+                            total += 1;
+                        }
+                    }
+                }
+            }
+            // Bottom side decrease
+            else if max_row < prev_max_row {
+                for col in min_col..=max_col {
+                    for row in max_row + 1..=prev_max_row {
+                        let field = &self.grid[row][col];
+                        if field.field_type == MapFieldType::Node && !field.covered {
+                            total -= 1;
+                        }
+                    }
+                }
+            }
+
+            return total;
+        }
 
         for row in min_row..=max_row {
             for col in min_col..=max_col {
@@ -138,27 +263,69 @@ fn effective_radius(map: &Map, pos: &Position, beacon: usize) -> usize {
     }
 }
 
-fn try_map(map: &mut Map, beacons: &[usize]) -> (usize, Vec<Position>) {
+fn try_map(map: &mut Map, beacons: &[usize]) -> (isize, Vec<Position>) {
     let mut positions = Vec::new();
     let mut total = 0;
 
     for beacon in beacons {
-        let mut max: Vec<(usize, Position)> = Vec::new();
-        // Maybe don't start at the border
-        for row in 0..map.height {
-            for col in 0..map.width {
-                if map.grid[row][col].field_type == MapFieldType::Node || map.grid[row][col].covered
-                {
-                    continue;
-                }
+        let mut max: Vec<(isize, Position)> = Vec::new();
+        let start = if *beacon < map.height && *beacon < map.width {
+            *beacon
+        } else {
+            0
+        };
 
-                let radius = effective_radius(map, &Position { row, col }, *beacon);
-                let value = map.uncovered_nodes(Position { row, col }, radius);
-                if max.is_empty() || max[0].0 == value {
-                    max.push((value, Position { row, col }));
-                } else if value > max[0].0 {
-                    max.clear();
-                    max.push((value, Position { row, col }));
+        for row in start..map.height - start {
+            let mut prev_pos = None;
+            let mut prev_value = None;
+            let mut prev_radius = None;
+
+            // Splitting the loop like this makes it 10% faster (somehow)
+            if row % 2 == 0 {
+                for col in start..map.width - start {
+                    if map.grid[row][col].field_type == MapFieldType::Node
+                        || map.grid[row][col].covered
+                    {
+                        continue;
+                    }
+
+                    let pos = Position { row, col };
+                    let radius = effective_radius(map, &pos, *beacon);
+                    let value =
+                        map.uncovered_nodes(&pos, radius, prev_pos, prev_value, prev_radius);
+                    if max.is_empty() || max[0].0 == value {
+                        max.push((value, pos.clone()));
+                    } else if value > max[0].0 {
+                        max.clear();
+                        max.push((value, pos.clone()));
+                    }
+
+                    prev_pos = Some(pos);
+                    prev_value = Some(value);
+                    prev_radius = Some(radius);
+                }
+            } else {
+                for col in (start..map.width - start).rev() {
+                    if map.grid[row][col].field_type == MapFieldType::Node
+                        || map.grid[row][col].covered
+                    {
+                        continue;
+                    }
+
+                    let pos = Position { row, col };
+                    let radius = effective_radius(map, &pos, *beacon);
+                    let value =
+                        map.uncovered_nodes(&pos, radius, prev_pos, prev_value, prev_radius);
+                    if max.is_empty() || max[0].0 == value {
+                        max.push((value, pos.clone()));
+                    } else if value > max[0].0 {
+                        max.clear();
+                        max.push((value, pos.clone()));
+                    }
+
+                    prev_pos = Some(pos);
+                    prev_value = Some(value);
+                    prev_radius = Some(radius);
                 }
             }
         }
@@ -312,6 +479,7 @@ fn main() {
         let mut merged = merge_maps(&maps, &possibility);
         let (total, positions) = try_map(&mut merged, &beacons);
         if total > max {
+            eprintln!("covered nodes: {}", total);
             print_result(&merged, &positions);
             max = total;
         }
